@@ -8,7 +8,7 @@ async function visitAuthCodeGeneration() {
     const browser = await puppeteer.launch({ headless: false }); // 브라우저 동작을 확인하기 위해 headless: false
     const page = await browser.newPage();
 
-    const redirectURL = "http://localhost:3000&";
+    const redirectURL = "http://localhost:8080&";
     const url =
       config.authURL +
       `&client_id=${config.clientID}&redirect_uri=${redirectURL}`;
@@ -38,6 +38,20 @@ async function visitAuthCodeGeneration() {
   }
 }
 
+async function makeRequest(url, payload) {
+  try {
+    const response = await axios.post(url, payload, {
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+    });
+    return response.data;
+  } catch (e) {
+    console.log(e);
+    return null;
+  }
+}
+
 async function getRefreshToken(code) {
   const payload = {
     code: code,
@@ -47,29 +61,18 @@ async function getRefreshToken(code) {
   };
 
   // console.log(payload);
+  const url = "https://auth.worksmobile.com/oauth2/v2.0/token";
   try {
-    const response = await axios.post(
-      "https://auth.worksmobile.com/oauth2/v2.0/token",
-      payload,
-      {
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-      }
-    );
+    const tokenData = await makeRequest(url, payload);
 
-    const { refresh_token, access_token } = await response.data;
-
-    await updateEnvFile("ACCESS_TOKEN", access_token);
-    await updateEnvFile("REFRESH_TOKEN", refresh_token);
+    if (tokenData) {
+      const { refresh_token, access_token } = tokenData;
+      await updateEnvFile("ACCESS_TOKEN", access_token);
+      await updateEnvFile("REFRESH_TOKEN", refresh_token);
+    }
   } catch (e) {
     console.log(e);
   }
-
-  // axios의 응답에서 data 속성이 이미 파싱된 JSON 객체를 반환합니다.
-  // response.data를 사용하는 것이 맞습니다.
-
-  // console.log(response.data);
 }
 
 async function updateEnvFile(key, value) {
@@ -102,4 +105,32 @@ async function updateEnvFile(key, value) {
 // 사용 예시:
 // await updateEnvFile('ACCESS_TOKEN', '새로운토큰값');
 
-module.exports = { getRefreshToken, visitAuthCodeGeneration };
+async function getAccessToken() {
+  const reqURL = "https://auth.worksmobile.com/oauth2/v2.0/token";
+
+  // .env 파일에서 refresh_token 읽기
+  const refresh_token = process.env.REFRESH_TOKEN;
+
+  const payload = {
+    refresh_token: refresh_token,
+    grant_type: "refresh_token",
+    client_id: config.clientID,
+    client_secret: config.clientSecret,
+  };
+
+  try {
+    const response = await makeRequest(reqURL, payload);
+
+    if (response) {
+      // console.log(response);
+      // 새로운 access token을 .env 파일에 저장
+      await updateEnvFile("ACCESS_TOKEN", response.access_token);
+      return response.access_token;
+    }
+  } catch (error) {
+    console.error("토큰 갱신 중 에러:", error);
+    throw error;
+  }
+}
+
+module.exports = { getRefreshToken, visitAuthCodeGeneration, getAccessToken };
