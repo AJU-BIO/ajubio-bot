@@ -1,79 +1,105 @@
-DECLARE @기간 INT = 3; -- 조회할 직전 기간 (예: 3개월, 6개월 등)
-DECLARE @기준인덱스 INT;
-DECLARE @CSO코드 NVARCHAR(28);
+-- DECLARE @abmail NVARCHAR(44) = 'jhbio@ajubio.com'; -- 입력된 회사 이메일
+-- DECLARE @hospitalName NVARCHAR(78) = '강남세브'; -- 병원명
+-- DECLARE @monthCount INT = 6; -- 조회 기간(월수)
 
--- 특정 이메일 목록
-DECLARE @특정이메일 TABLE (email NVARCHAR(100));
-INSERT INTO @특정이메일 VALUES ('jeongjae.lee@ajubio.com'), ('inmo.yang@ajubio.com'), ('junho.kim@ajubio.com');
+-- 관리자의 이메일 리스트
+DECLARE @adminEmails TABLE ([email] NVARCHAR(44));
+INSERT INTO @adminEmails ([email])
+VALUES ('jeongjae.lee@ajubio.com'), ('inmo.yang@ajubio.com'), ('junho.kim@ajubio.com'); -- 관리자 이메일 추가
 
--- 기준 인덱스를 SALES_TB 테이블의 sales_index 최대값으로 설정
-SET @기준인덱스 = (SELECT MAX([sales_index]) FROM [dbo].[SALES_TB]);
+-- 가장 최근의 salesIndex를 계산
+DECLARE @maxSalesIndex INT;
+SELECT @maxSalesIndex = MAX([sales_index])
+FROM [dbo].[SALES_TB];
 
--- 이메일에 해당하는 CSO 코드 가져오기
-SET @CSO코드 = (SELECT [cso_cd] 
-                FROM [dbo].[CSO_TB] 
-                WHERE [cso_abmail] = @CSO_AB메일);
+-- 조회 시작 인덱스 계산
+DECLARE @startSalesIndex INT = @maxSalesIndex - @monthCount + 1;
 
--- 병원별 품목군별 CSO별 실적 조회
-SELECT 
-    [dbo].[HOSPITAL_TB].[hos_abbr] AS [병원명],
-    [dbo].[HOSPITAL_TB].[hos_type] AS [병원종별],
-    [dbo].[BLOCK_TB].[cso_cd] AS [CSO코드],
-    [dbo].[CSO_TB].[cso_dealer_nm] AS [CSO딜러명],
-    [dbo].[PRODUCT_TB].[drug_class] AS [품목군],
-    [dbo].[SALES_TB].[sales_year] AS [년],
-    [dbo].[SALES_TB].[sales_month] AS [월],
-    SUM([dbo].[SALES_TB].[drug_cnt]) AS [월별총처방수량],
-    SUM([dbo].[SALES_TB].[drug_cnt] * [dbo].[PRODUCT_TB].[drug_price]) AS [월별총매출금액]
-FROM 
-    [dbo].[SALES_TB]
-JOIN 
-    [dbo].[HOSPITAL_TB]
-ON 
-    [dbo].[SALES_TB].[sfa_cd] = [dbo].[HOSPITAL_TB].[sfa_cd]
-JOIN 
-    [dbo].[PRODUCT_TB]
-ON 
-    [dbo].[SALES_TB].[drug_cd] = [dbo].[PRODUCT_TB].[drug_cd]
-    AND [dbo].[SALES_TB].[sales_index] >= [dbo].[PRODUCT_TB].[start_index]
-    AND [dbo].[SALES_TB].[sales_index] <= [dbo].[PRODUCT_TB].[end_index]
-JOIN 
-    [dbo].[BLOCK_TB]
-ON 
-    [dbo].[SALES_TB].[sfa_cd] = [dbo].[BLOCK_TB].[sfa_cd]
-    AND [dbo].[SALES_TB].[drug_cd] = [dbo].[BLOCK_TB].[drug_cd] -- 품목별 연결
-JOIN 
-    [dbo].[CSO_TB]
-ON 
-    [dbo].[BLOCK_TB].[cso_cd] = [dbo].[CSO_TB].[cso_cd]
-WHERE 
-    [dbo].[HOSPITAL_TB].[hos_name] LIKE '%' + @병원명 + '%'
-    AND [dbo].[SALES_TB].[sales_index] BETWEEN (@기준인덱스 - @기간+1) AND @기준인덱스
-    AND (
-        @CSO코드 = [dbo].[BLOCK_TB].[cso_cd] -- 일반 이메일 조건
-        OR EXISTS (SELECT 1 FROM @특정이메일 WHERE email = @CSO_AB메일) -- 특정 이메일
+-- 이메일 기반 분기 처리
+IF @abmail IN (SELECT [email] FROM @adminEmails)
+BEGIN
+    -- 관리자 이메일: 모든 병원 조회 가능
+    WITH authenticatedHospitals AS (
+        SELECT DISTINCT 
+            [h].[sfa_cd] AS [sfaCode], 
+            [h].[hos_abbr] AS [hospitalAbbreviation], 
+            [h].[hos_name] AS [hospitalName]
+        FROM [dbo].[HOSPITAL_TB] [h]
+    ),
+    filteredSales AS (
+        SELECT 
+            [s].[sfa_cd] AS [sfaCode],
+            [p].[drug_class] AS [productGroup], -- 품목군
+            [s].[sales_year] AS [salesYear],
+            [s].[sales_month] AS [salesMonth],
+            [s].[sales_index] AS [salesIndex],
+            [s].[drug_cnt] AS [drugCount],
+            [p].[drug_price] AS [drugPrice],
+            [s].[cso_cd_then] AS [dealerCode]
+        FROM [dbo].[SALES_TB] [s]
+        JOIN [dbo].[PRODUCT_TB] [p]
+            ON [s].[drug_cd] = [p].[drug_cd]
+            AND [s].[sales_index] BETWEEN [p].[start_index] AND [p].[end_index]
+        WHERE [s].[sales_index] BETWEEN @startSalesIndex AND @maxSalesIndex
     )
-GROUP BY 
-    [dbo].[HOSPITAL_TB].[hos_abbr],
-    [dbo].[HOSPITAL_TB].[hos_type],
-    [dbo].[BLOCK_TB].[cso_cd],
-    [dbo].[CSO_TB].[cso_dealer_nm],
-    [dbo].[PRODUCT_TB].[drug_class],
-    [dbo].[SALES_TB].[sales_year],
-    [dbo].[SALES_TB].[sales_month]
-ORDER BY 
-    [병원명], [CSO코드], [품목군], [년], [월];
-
--- 특정 이메일 권한 여부 메시지 출력
-IF EXISTS (SELECT 1 FROM @특정이메일 WHERE email = @CSO_AB메일)
-BEGIN
-    PRINT '특정 이메일로 조회 중: 모든 데이터 접근 가능합니다.';
-END
-ELSE IF @CSO코드 IS NOT NULL
-BEGIN
-    PRINT '입력한 이메일에 해당하는 CSO 데이터 조회 중.';
+    SELECT 
+        [h].[hospitalAbbreviation] AS [hospital],
+        [a].[productGroup] AS [productGroup],
+        [a].[salesYear] AS [year],
+        [a].[salesMonth] AS [month],
+        SUM([a].[drugCount] * [a].[drugPrice]) AS [total],
+        [c].[cso_dealer_nm] AS [dealer]
+    FROM filteredSales [a]
+    JOIN authenticatedHospitals [h] ON [a].[sfaCode] = [h].[sfaCode]
+    LEFT JOIN [dbo].[CSO_TB] [c] ON [a].[dealerCode] = [c].[cso_cd]
+    WHERE [h].[hospitalName] LIKE '%' + @hospitalName + '%'
+    GROUP BY [h].[hospitalAbbreviation], [a].[productGroup], [a].[salesYear], [a].[salesMonth], [c].[cso_dealer_nm]
+    ORDER BY [a].[salesYear] DESC, [a].[salesMonth] DESC, [a].[productGroup];
 END
 ELSE
 BEGIN
-    PRINT '입력한 이메일에 해당하는 CSO 데이터가 없습니다.';
-END;
+    -- 비관리자 이메일: 해당 이메일로 연결된 거래처만 조회
+    WITH authenticatedCSO AS (
+        SELECT [c].[cso_cd] AS [csoCode]
+        FROM [dbo].[CSO_TB] [c]
+        WHERE [c].[cso_abmail] = @abmail
+    ),
+    filteredSales AS (
+        SELECT 
+            [s].[sfa_cd] AS [sfaCode],
+            [p].[drug_class] AS [productGroup], -- 품목군
+            [s].[sales_year] AS [salesYear],
+            [s].[sales_month] AS [salesMonth],
+            [s].[sales_index] AS [salesIndex],
+            [s].[drug_cnt] AS [drugCount],
+            [p].[drug_price] AS [drugPrice],
+            [s].[cso_cd_then] AS [dealerCode]
+        FROM [dbo].[SALES_TB] [s]
+        JOIN [dbo].[PRODUCT_TB] [p]
+            ON [s].[drug_cd] = [p].[drug_cd]
+            AND [s].[sales_index] BETWEEN [p].[start_index] AND [p].[end_index]
+        WHERE [s].[sales_index] BETWEEN @startSalesIndex AND @maxSalesIndex
+          AND [s].[cso_cd_then] IN (SELECT [csoCode] FROM authenticatedCSO)
+    ),
+    authenticatedHospitals AS (
+        SELECT DISTINCT 
+            [h].[sfa_cd] AS [sfaCode], 
+            [h].[hos_abbr] AS [hospitalAbbreviation], 
+            [h].[hos_name] AS [hospitalName]
+        FROM [dbo].[HOSPITAL_TB] [h]
+        WHERE [h].[sfa_cd] IN (SELECT DISTINCT [sfaCode] FROM filteredSales)
+    )
+    SELECT 
+        [h].[hospitalAbbreviation] AS [hospital],
+        [a].[productGroup] AS [productGroup],
+        [a].[salesYear] AS [year],
+        [a].[salesMonth] AS [month],
+        SUM([a].[drugCount] * [a].[drugPrice]) AS [total],
+        [c].[cso_dealer_nm] AS [dealer]
+    FROM filteredSales [a]
+    JOIN authenticatedHospitals [h] ON [a].[sfaCode] = [h].[sfaCode]
+    LEFT JOIN [dbo].[CSO_TB] [c] ON [a].[dealerCode] = [c].[cso_cd]
+    WHERE [h].[hospitalName] LIKE '%' + @hospitalName + '%'
+    GROUP BY [h].[hospitalAbbreviation], [a].[productGroup], [a].[salesYear], [a].[salesMonth], [c].[cso_dealer_nm]
+    ORDER BY [a].[salesYear] DESC, [a].[salesMonth] DESC, [a].[productGroup];
+END
