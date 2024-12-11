@@ -2,7 +2,7 @@ const client = require("./client");
 const axios = require("axios");
 const config = require("./config");
 const searchData = require("./searchData");
-
+const flexMaker = require("./flexMaker");
 async function sendHospitalInfo(
   hospitalName,
   csoEmail,
@@ -25,100 +25,7 @@ async function sendHospitalInfo(
     return;
   }
 
-  console.log(hospitalInfo);
-
-  const monthlySales = hospitalInfo.reduce((acc, info) => {
-    const ym = `${info.year % 100}년${info.month}월`;
-    const existingEntry = acc.find((item) => item.ym === ym);
-    if (existingEntry) {
-      existingEntry.total += info.total / 1000000;
-      existingEntry.sales = `${existingEntry.total.toFixed(1)}백만`;
-    } else {
-      acc.push({
-        ym,
-        total: info.total / 1000000,
-        sales: `${(info.total / 1000000).toFixed(1)}백만`,
-      });
-    }
-    return acc;
-  }, []);
-
-  const roundedMonthlySales = monthlySales.map((item) => ({
-    ...item,
-    total: Number(item.total.toFixed(1)),
-  }));
-
-  // 월별 데이터 정렬 (연도와 월을 고려)
-  const sortedSales = roundedMonthlySales.sort((a, b) => {
-    const [yearA, monthA] = a.ym.split("년").map((v) => parseInt(v));
-    const [yearB, monthB] = b.ym.split("년").map((v) => parseInt(v));
-    if (yearA !== yearB) return yearA - yearB;
-    return parseInt(monthA) - parseInt(monthB);
-  });
-
-  const labels = sortedSales.map((item) => item.ym);
-  const values = sortedSales.map((item) => item.total);
-
-  const chartConfig = {
-    type: "line",
-    data: {
-      labels: labels,
-      datasets: [
-        {
-          data: values,
-          borderColor: "rgb(29, 45, 122)",
-          backgroundColor: "rgb(29, 45, 122)",
-          fill: false,
-          tension: 0.4,
-          datalabels: {
-            align: "top",
-            anchor: "end",
-          },
-        },
-      ],
-    },
-    options: {
-      backgroundColor: "white",
-      aspectRatio: 3,
-      legend: {
-        display: false,
-      },
-      plugins: {
-        datalabels: {
-          color: "#666",
-          font: {
-            weight: "bold",
-          },
-        },
-      },
-      scales: {
-        xAxes: [
-          {
-            ticks: {
-              color: "#666",
-            },
-          },
-        ],
-        yAxes: [
-          {
-            display: false,
-            gridLines: {
-              display: false,
-            },
-          },
-        ],
-      },
-    },
-  };
-
-  // 이스케이프 문자 처리를 위해 JSON.stringify 결과를 한번 더 파싱
-  const chartConfigStr = JSON.stringify(chartConfig);
-  const parsedConfig = JSON.parse(chartConfigStr);
-  const imgURL = `https://quickchart.io/chart?c=${encodeURIComponent(
-    JSON.stringify(parsedConfig)
-  )}`;
-
-  // console.log(imgURL);
+  const imgURL = await generateSalesChart(hospitalInfo);
 
   const hosName = hospitalInfo[0].hospital;
   const year = hospitalInfo[0].year;
@@ -217,16 +124,17 @@ async function sendHospitalInfo(
     month: month,
     sales: formattedResults,
   };
+  console.log(JSON.stringify(data, null, 2));
 
   const payload = {
     content: {
       type: "flex",
       altText: `${hosName} 실적현황`,
-      contents: genPayload(data, imgURL),
+      contents: flexMaker.makeFlexMessage(data, imgURL),
     },
   };
-  console.log(JSON.stringify(payload, null, 2));
-  // fetcher(uid, payload);
+  // console.log(JSON.stringify(data, null, 2));
+  fetcher(uid, payload);
 }
 
 async function fetcher(uid, payload) {
@@ -267,164 +175,99 @@ async function postHandler(req) {
   }
 }
 
-function genPayload(jsList, imgURL) {
-  return {
-    type: "carousel",
-    contents: [
-      {
-        type: "bubble",
-        styles: {
-          hero: {
-            backgroundColor: "#ffffff",
+sendHospitalInfo("성빈센트", "jeongjae.lee@ajubio.com", 6);
+
+async function generateSalesChart(hospitalInfo) {
+  const monthlySales = hospitalInfo.reduce((acc, info) => {
+    const ym = `${info.year % 100}년${info.month}월`;
+    const existingEntry = acc.find((item) => item.ym === ym);
+    if (existingEntry) {
+      existingEntry.total += info.total / 1000000;
+      existingEntry.sales = `${existingEntry.total.toFixed(1)}백만`;
+    } else {
+      acc.push({
+        ym,
+        total: info.total / 1000000,
+        sales: `${(info.total / 1000000).toFixed(1)}백만`,
+      });
+    }
+    return acc;
+  }, []);
+
+  const roundedMonthlySales = monthlySales.map((item) => ({
+    ...item,
+    total: Number(item.total.toFixed(1)),
+  }));
+
+  // 월별 데이터 정렬 (연도와 월을 고려)
+  const sortedSales = roundedMonthlySales.sort((a, b) => {
+    const [yearA, monthA] = a.ym.split("년").map((v) => parseInt(v));
+    const [yearB, monthB] = b.ym.split("년").map((v) => parseInt(v));
+    if (yearA !== yearB) return yearA - yearB;
+    return parseInt(monthA) - parseInt(monthB);
+  });
+
+  const labels = sortedSales.map((item) => item.ym);
+  const values = sortedSales.map((item) => item.total);
+
+  const chartConfig = {
+    type: "line",
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          data: values,
+          borderColor: "navy",
+          backgroundColor: "navy",
+          fill: false,
+          tension: 0.4,
+          datalabels: {
+            align: "top",
+            anchor: "end",
           },
         },
-        hero: {
-          url: imgURL,
-          action: {
-            type: "",
+      ],
+    },
+    options: {
+      backgroundColor: "white",
+      aspectRatio: 3,
+      legend: {
+        display: false,
+      },
+      plugins: {
+        datalabels: {
+          color: "#666",
+          font: {
+            weight: "bold",
           },
-          type: "image",
-          aspectMode: "fit",
-        },
-        body: {
-          type: "box",
-          layout: "vertical",
-          contents: [
-            {
-              type: "text",
-              text: `${jsList.hospitalName} 실적현황`,
-              weight: "bold",
-              size: "xl",
-            },
-            {
-              layout: "horizontal",
-              action: {
-                type: "",
-              },
-              type: "box",
-              contents: jsList.sales.map((js) => {
-                console.log(js.yearmonth);
-                return (
-                  {
-                    type: "text",
-                    text: `${js.yearmonth} 실적:`,
-                    margin: "xxl",
-                    size: "md",
-                    gravity: "center",
-                    align: "center",
-                  },
-                  {
-                    layout: "vertical",
-                    action: {
-                      type: "",
-                    },
-                    type: "box",
-                    contents: [
-                      {
-                        text: js.sales,
-                        action: {
-                          type: "",
-                        },
-                        type: "text",
-                        size: "xl",
-                        align: "center",
-                        gravity: "center",
-                      },
-                    ],
-                  }
-                );
-              }),
-            },
-            {
-              type: "separator",
-              color: "#888888",
-              margin: "lg",
-            },
-            {
-              layout: "vertical",
-              action: {
-                type: "",
-              },
-              type: "box",
-              contents: [
-                {
-                  layout: "vertical",
-                  action: {
-                    type: "",
-                  },
-                  type: "box",
-                  contents: [
-                    {
-                      text: "월별 품목군별 실적",
-                      action: {
-                        type: "",
-                      },
-                      type: "text",
-                      margin: "lg",
-                    },
-                    {
-                      layout: "vertical",
-                      action: {
-                        type: "",
-                      },
-                      type: "box",
-                    },
-                  ],
-                },
-                ...jsList.sales.map((js) => {
-                  return {
-                    layout: "horizontal",
-                    action: {
-                      type: "",
-                    },
-                    type: "box",
-                    contents: js.groups.map((jjs) => {
-                      return (
-                        {
-                          layout: "horizontal",
-                          action: {
-                            type: "",
-                          },
-                          type: "box",
-                          contents: [
-                            {
-                              text: `${js.yearmonth} | ${jjs.key}:`,
-                              action: {
-                                type: "",
-                              },
-                              type: "text",
-                            },
-                          ],
-                        },
-                        {
-                          layout: "horizontal",
-                          action: {
-                            type: "",
-                          },
-                          type: "box",
-                          contents: [
-                            {
-                              text: jjs.value,
-                              action: {
-                                type: "",
-                              },
-                              type: "text",
-                              align: "end",
-                            },
-                          ],
-                        }
-                      );
-                    }),
-                  };
-                }),
-              ],
-              margin: "xl",
-            },
-          ],
         },
       },
-    ],
+      scales: {
+        xAxes: [
+          {
+            ticks: {
+              color: "#666",
+            },
+          },
+        ],
+        yAxes: [
+          {
+            display: false,
+            gridLines: {
+              display: false,
+            },
+          },
+        ],
+      },
+    },
   };
-}
 
-sendHospitalInfo("성빈센트", "jeongjae.lee@ajubio.com", 6);
+  // 이스케이프 문자 처리를 위해 JSON.stringify 결과를 한번 더 파싱
+  const chartConfigStr = JSON.stringify(chartConfig);
+  const parsedConfig = JSON.parse(chartConfigStr);
+  const imgURL = `https://quickchart.io/chart?c=${encodeURIComponent(
+    JSON.stringify(parsedConfig)
+  )}`;
+
+  return imgURL;
+}

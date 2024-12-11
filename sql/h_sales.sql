@@ -13,7 +13,7 @@ SELECT @maxSalesIndex = MAX([sales_index])
 FROM [dbo].[SALES_TB];
 
 -- 조회 시작 인덱스 계산
-DECLARE @startSalesIndex INT = @maxSalesIndex - @monthCount + 1;
+DECLARE @startSalesIndex INT = @maxSalesIndex - @monthCount +1;
 
 -- 이메일 기반 분기 처리
 IF @abmail IN (SELECT [email] FROM @adminEmails)
