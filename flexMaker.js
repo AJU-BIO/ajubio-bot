@@ -33,7 +33,7 @@ function addHeadLine(json, text, align = "start") {
   return json;
 }
 
-// 구분선 추가 함수
+// 구분선 추가 함수sss
 function addSeparator(json, color) {
   json.contents[0].body.contents.push({
     type: "separator",
