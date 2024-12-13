@@ -23,6 +23,11 @@ app.get("/", async (req, res) => {
   }
 });
 
+app.post("/", async (req, res) => {
+  console.log(req.body);
+  messenger.postHandler(req.body);
+});
+
 // 외부 API 요청 및 리다이렉트 테스트를 위한 엔드포인트
 
 const PORT = 8080;

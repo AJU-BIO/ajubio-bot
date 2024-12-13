@@ -162,20 +162,29 @@ async function fetcher(uid, payload) {
   return response.data;
 }
 
-async function postHandler(req) {
-  req = {
-    type: "message",
-    source: {
-      userId: "73524122-e756-4c53-179e-0378b4ad90b5",
-      domainId: 300118260,
-    },
-    issuedTime: "2024-12-10T10:14:37.77Z",
-    content: { type: "text", text: "/병원 아주대" },
+async function sendMessage(uid, msg) {
+  const payload = {
+    content: { type: "text", text: msg },
   };
+  fetcher(uid, payload);
+}
+
+async function postHandler(req) {
+  // req = {
+  //   type: "message",
+  //   source: {
+  //     userId: "73524122-e756-4c53-179e-0378b4ad90b5",
+  //     domainId: 300118260,
+  //   },
+  //   issuedTime: "2024-12-10T10:14:37.77Z",
+  //   content: { type: "text", text: "/병원 아주대" },
+  // };
 
   const uid = req.source.userId;
   const msg = req.content.text;
   const type = req.type;
+
+  sendMessage(uid, msg);
 
   if (type === "message") {
     if (msg.startsWith("/병원")) {
@@ -281,3 +290,8 @@ async function generateSalesChart(hospitalInfo) {
 
   return imgURL;
 }
+
+module.exports = {
+  sendHospitalInfo,
+  postHandler,
+};
