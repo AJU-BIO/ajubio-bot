@@ -1,4 +1,4 @@
-DECLARE @searchTerm NVARCHAR(100) = '우병'; -- 검색할 단어
+-- DECLARE @searchTerm NVARCHAR(100) = '우병'; -- 검색할 단어
 
 -- 병원 코드 조회
 SELECT 
