@@ -1,8 +1,9 @@
-const client = require("./client");
+const client = require("./worksAuth");
 const axios = require("axios");
 const config = require("./config");
 const searchData = require("./searchData");
 const flexMaker = require("./flexMaker");
+
 async function sendHospitalInfo(
   hospitalName,
   csoEmail,
@@ -145,9 +146,18 @@ async function fetcher(uid, payload) {
     Authorization: `Bearer ${await client.getAccessToken()}`,
     "Content-Type": "application/json",
   };
-  const response = await axios.post(postURL, payload, {
-    headers: header,
-  });
+  try {
+    const response = await axios.post(postURL, payload, {
+      headers: header,
+    });
+    return response.data;
+  } catch (e) {
+    console.log("에러 상태 코드:", e.response?.status);
+    console.log(
+      "에러 메시지:",
+      e.response?.data?.error_description || e.message
+    );
+  }
 
   return response.data;
 }
