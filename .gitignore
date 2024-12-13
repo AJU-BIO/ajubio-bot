@@ -1,0 +1,14 @@
+# 환경 변수 파일
+.env
+.env.local
+.env.*.local
+
+# IDE 설정 파일 (선택사항)
+.idea/
+.vscode/
+
+# 노드 모듈
+node_modules/
+
+# 로그 파일
+*.log 

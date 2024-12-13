@@ -177,6 +177,32 @@ function addImage(json, imageUrl) {
   return json;
 }
 
+// 버튼 라인 추가 함수
+function addButtonLine(json, label, data, displayText) {
+  json.contents[0].body.contents.push({
+    layout: "horizontal",
+    type: "box",
+    contents: [
+      {
+        action: {
+          type: "postback",
+          label: label,
+          data: data,
+          displayText: displayText,
+        },
+        type: "button",
+        color: "#ffffff",
+      },
+    ],
+    backgroundColor: "#000088",
+    cornerRadius: "25px",
+    width: "100%",
+    height: "50px",
+    spacing: "md",
+    paddingAll: "0px",
+    margin: "md",
+  });
+}
 // 사용 예시:
 function makeFlexMessage(jsList, imageUrl) {
   let json = startJSON();
@@ -212,6 +238,7 @@ function makeFlexMessage(jsList, imageUrl) {
 
     addSeparator(json, "#e1e1e1");
   });
+  addButtonLine(json, "TESTBtn", "data1=1&data2=2", "");
 
   return json;
 }
