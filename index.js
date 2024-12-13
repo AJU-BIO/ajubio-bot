@@ -2,6 +2,7 @@ const express = require("express");
 const axios = require("axios");
 const app = express();
 const worksAuth = require("./worksAuth");
+const messenger = require("./messenger");
 // JSON 파싱을 위한 미들웨어
 app.use(express.json());
 
