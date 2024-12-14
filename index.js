@@ -11,7 +11,7 @@ app.get("/", async (req, res) => {
   // 쿼리 파라미터 파싱
 
   res.send(`
-    <h1>Hello World</h1>
+    <h1>${process.env.envTest}</h1>
   `);
 
   const code = req.query.code || "justVisit";
