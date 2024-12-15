@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 .env
 node_modules
 tester.js
@@ -41,3 +42,19 @@ coverage/
 *.pem
 *.key
 *.cert
+=======
+# 환경 변수 파일
+.env
+.env.local
+.env.*.local
+
+# IDE 설정 파일 (선택사항)
+.idea/
+.vscode/
+
+# 노드 모듈
+node_modules/
+
+# 로그 파일
+*.log 
+>>>>>>> c06f00932e898c45a8841ea6514af8310aa6fb25

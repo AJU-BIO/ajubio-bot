@@ -1,5 +1,9 @@
 {
+<<<<<<< HEAD
   "name": "ajubiobot",
+=======
+  "name": "chatbot",
+>>>>>>> c06f00932e898c45a8841ea6514af8310aa6fb25
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
@@ -11,10 +15,17 @@
   "description": "",
   "dependencies": {
     "axios": "^1.7.9",
+<<<<<<< HEAD
     "crypto": "^1.0.1",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "mssql": "^11.0.1",
     "puppeteer": "^23.10.4"
+=======
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "mssql": "^11.0.1",
+    "puppeteer": "^23.10.2"
+>>>>>>> c06f00932e898c45a8841ea6514af8310aa6fb25
   }
 }
