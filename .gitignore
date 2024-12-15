@@ -1,0 +1,43 @@
+.env
+node_modules
+tester.js
+
+  
+# 운영체제 관련 파일
+.DS_Store
+Thumbs.db
+
+# IDE 설정 파일
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# 로그 파일
+*.log
+logs/
+npm-debug.log*
+
+# 임시 파일
+*.tmp
+*.temp
+.cache/
+
+# 빌드 결과물
+dist/
+build/
+out/
+
+# 테스트 커버리지 리포트
+coverage/
+
+# 환경 설정 파일 (이미 .env는 포함되어 있음)
+.env.local
+.env.development
+.env.test
+.env.production
+
+# 보안 관련 파일
+*.pem
+*.key
+*.cert
