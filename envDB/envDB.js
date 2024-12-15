@@ -5,7 +5,7 @@ const { encrypt, decrypt } = require("./cryptoUtils");
 async function setValIntoDB(key, value) {
   const connection = await connectDB();
   const encryptedValue = encrypt(value);
-  console.log(encryptedValue);
+  // console.log(encryptedValue);
 
   // 기존 키가 있는지 확인
   const result = await connection
